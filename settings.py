@@ -8,6 +8,13 @@ BLOCK_SIZE = 40
 FPS = 60
 MAPS_FOLDER = "maps"
 
+# Игровые настройки
+INITIAL_PLAYER_HEALTH = 100
+INITIAL_PLAYER_AMMO = 30
+PLAYER_SPEED = 5
+CANNON_ROTATION_SPEED = 1.5
+CANNON_ENTRY_RADIUS = 1.5  # Радиус входа в пушку (в блоках)
+
 # Создаём папку для карт
 if not os.path.exists(MAPS_FOLDER):
     os.makedirs(MAPS_FOLDER)

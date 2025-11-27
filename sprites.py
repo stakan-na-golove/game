@@ -69,13 +69,13 @@ class Player(pygame.sprite.Sprite):
         self.name = name
         self.controls = controls
         self.vel_y = 0
-        self.speed = 5
+        self.speed = PLAYER_SPEED  # Используем настройку из settings.py
         self.gravity = 0.7
         self.jump_power = -14
         self.on_ground = False
         self.facing_right = name == 'p1'
-        self.hp = 100
-        self.ammo = 30
+        self.hp = INITIAL_PLAYER_HEALTH  # Используем настройку из settings.py
+        self.ammo = INITIAL_PLAYER_AMMO  # Используем настройку из settings.py
         self.score = 0
         # Взрывные заряды
         self.has_explosive = False
@@ -115,7 +115,7 @@ class Player(pygame.sprite.Sprite):
         for cannon in cannons:
             dist = math.hypot(self.rect.centerx - cannon.rect.centerx,
                               self.rect.centery - cannon.rect.centery)
-            if dist < BLOCK_SIZE * 1.2:
+            if dist < BLOCK_SIZE * CANNON_ENTRY_RADIUS:  # Используем настройку из settings.py
                 return cannon
         return None
     
@@ -152,11 +152,11 @@ class Player(pygame.sprite.Sprite):
         if self.in_cannon:
             self.rect.center = self.in_cannon.rect.center
             self.vel_y = 0
-            # Замедленное движение ствола (было 3, стало 1.5)
+            # Замедленное движение ствола (используем настройку из settings.py)
             if keys[self.controls['up']]:
-                self.cannon_angle = min(210, self.cannon_angle + 1.5)
+                self.cannon_angle = min(210, self.cannon_angle + CANNON_ROTATION_SPEED)
             if keys[self.controls['down']]:
-                self.cannon_angle = max(-30, self.cannon_angle - 1.5)
+                self.cannon_angle = max(-30, self.cannon_angle - CANNON_ROTATION_SPEED)
             return
         dx = 0
         if keys[self.controls['left']]:
@@ -183,8 +183,7 @@ class Player(pygame.sprite.Sprite):
     
     def collide(self, tiles, dx, dy):
         for block in tiles:
-            if block.type in CANNON_TYPES:
-                continue
+            # Убираем исключение для пушек - теперь они твердые
             if self.rect.colliderect(block.rect):
                 if dx > 0:
                     self.rect.right = block.rect.left
@@ -279,7 +278,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = 100 if self.name == 'p1' else SCREEN_WIDTH - 140
         self.rect.y = 100
         self.vel_y = 0
-        self.hp = 100
+        self.hp = INITIAL_PLAYER_HEALTH  # Используем настройку из settings.py
         self.in_cannon = None
         self.has_explosive = False
         self.explosive_shots = 0
