@@ -84,6 +84,9 @@ class Player(pygame.sprite.Sprite):
         self.cannon_type = TYPE_CANNON
         self.cannon_angle = 45 if name == 'p1' else 135
         self.last_shot_time = 0
+        # Joystick support
+        self.joystick = None
+        self.joystick_id = None
         self.update_image()
     
     def update_image(self):
@@ -120,45 +123,97 @@ class Player(pygame.sprite.Sprite):
         return None
     
     def handle_event(self, event, tiles_group, projectiles_group, cannons, players, stats):
-        if event.type != pygame.KEYDOWN:
-            return
-        # Вход/Выход из пушки по одной клавише (Q или RShift)
-        if event.key == self.controls['toggle_cannon']:
+        if event.type == pygame.KEYDOWN:
+            # Вход/Выход из пушки по одной клавише (Q или RShift)
+            if event.key == self.controls['toggle_cannon']:
+                if self.in_cannon:
+                    # Выход из пушки
+                    self.exit_cannon()
+                elif self.on_ground:
+                    # Попытка войти в пушку
+                    cannon = self.find_nearby_cannon(cannons)
+                    if cannon:
+                        self.in_cannon = cannon
+                        self.cannon_type = cannon.type
+                        self.rect.center = cannon.rect.center
+                        self.cannon_angle = 90
+                return
             if self.in_cannon:
-                # Выход из пушки
-                self.exit_cannon()
-            elif self.on_ground:
-                # Попытка войти в пушку
-                cannon = self.find_nearby_cannon(cannons)
-                if cannon:
-                    self.in_cannon = cannon
-                    self.cannon_type = cannon.type
-                    self.rect.center = cannon.rect.center
-                    self.cannon_angle = 90
-            return
-        if self.in_cannon:
-            if event.key in [self.controls['shoot_left'], self.controls['shoot_right']]:
-                now = pygame.time.get_ticks()
-                if now - self.last_shot_time > self.get_cannon_cooldown():
-                    if self.ammo >= self.get_cannon_ammo_cost():
-                        self.shoot_cannon(projectiles_group, stats)
-                        self.last_shot_time = now
-            return
-        if event.key == self.controls['down'] and not self.on_ground:
-            self.place_block_below(tiles_group, stats)
+                if event.key in [self.controls['shoot_left'], self.controls['shoot_right']]:
+                    now = pygame.time.get_ticks()
+                    if now - self.last_shot_time > self.get_cannon_cooldown():
+                        if self.ammo >= self.get_cannon_ammo_cost():
+                            self.shoot_cannon(projectiles_group, stats)
+                            self.last_shot_time = now
+                return
+            if event.key == self.controls['down'] and not self.on_ground:
+                self.place_block_below(tiles_group, stats)
+        elif event.type == pygame.JOYBUTTONDOWN:
+            # Handle joystick button events for cannon mode
+            if self.joystick and event.joy == self.joystick.get_id():
+                # Button 0 = A, Button 1 = B, Button 2 = X, Button 3 = Y
+                # Button 6 = Back, Button 7 = Start, Button 8 = Xbox button
+                # Button 9 = Left stick press, Button 10 = Right stick press
+                if self.in_cannon:
+                    # A button to shoot in cannon mode
+                    if event.button == 0:  # A button
+                        now = pygame.time.get_ticks()
+                        if now - self.last_shot_time > self.get_cannon_cooldown():
+                            if self.ammo >= self.get_cannon_ammo_cost():
+                                self.shoot_cannon(projectiles_group, stats)
+                                self.last_shot_time = now
+                    # Y button to exit cannon mode
+                    elif event.button == 3:  # Y button
+                        self.exit_cannon()
+                else:
+                    # Y button to enter cannon mode
+                    if event.button == 3:  # Y button
+                        if self.on_ground:
+                            cannon = self.find_nearby_cannon(cannons)
+                            if cannon:
+                                self.in_cannon = cannon
+                                self.cannon_type = cannon.type
+                                self.rect.center = cannon.rect.center
+                                self.cannon_angle = 90
+                    # A button to place block
+                    elif event.button == 0:  # A button
+                        if not self.on_ground:
+                            self.place_block_below(tiles_group, stats)
     
     def update(self, tiles, cannons, projectiles_group, players):
         keys = pygame.key.get_pressed()
+        
+        # Check for joystick input if available
+        joystick_left_x = 0
+        joystick_right_x = 0
+        joystick_rt = 0
+        if self.joystick:
+            # Left stick X-axis for movement (axis 0)
+            joystick_left_x = self.joystick.get_axis(0)
+            # Right stick X-axis for cannon control (axis 3 for Xbox controller)
+            if self.joystick.get_numaxes() > 3:
+                joystick_right_x = self.joystick.get_axis(3)
+            # RT trigger for jumping (axis 5 for Xbox controller)
+            if self.joystick.get_numaxes() > 5:
+                joystick_rt = self.joystick.get_axis(5)
+        
         if self.in_cannon:
             self.rect.center = self.in_cannon.rect.center
             self.vel_y = 0
             # Замедленное движение ствола (используем настройку из settings.py)
+            # Keyboard controls
             if keys[self.controls['up']]:
                 self.cannon_angle = min(210, self.cannon_angle + CANNON_ROTATION_SPEED)
             if keys[self.controls['down']]:
                 self.cannon_angle = max(-30, self.cannon_angle - CANNON_ROTATION_SPEED)
+            # Joystick controls - use left stick for cannon control in cannon mode
+            if abs(joystick_left_x) > 0.1:  # Deadzone
+                self.cannon_angle += joystick_left_x * CANNON_ROTATION_SPEED * 2
+                self.cannon_angle = max(-30, min(210, self.cannon_angle))
             return
+        
         dx = 0
+        # Keyboard controls
         if keys[self.controls['left']]:
             dx = -self.speed
             if self.facing_right:
@@ -169,7 +224,19 @@ class Player(pygame.sprite.Sprite):
             if not self.facing_right:
                 self.facing_right = True
                 self.update_image()
-        if keys[self.controls['up']] and self.on_ground:
+        
+        # Joystick controls - use left stick for movement
+        if abs(joystick_left_x) > 0.1:  # Deadzone
+            dx = joystick_left_x * self.speed
+            if joystick_left_x > 0 and not self.facing_right:
+                self.facing_right = True
+                self.update_image()
+            elif joystick_left_x < 0 and self.facing_right:
+                self.facing_right = False
+                self.update_image()
+        
+        # Jumping - keyboard and joystick RT
+        if (keys[self.controls['up']] or joystick_rt > 0.5) and self.on_ground:
             self.vel_y = self.jump_power
             self.on_ground = False
         
