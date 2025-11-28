@@ -13,6 +13,13 @@ def main():
     pygame.display.set_caption("Pixel Forts Battle")
     clock = pygame.time.Clock()
     
+    # Initialize joystick support
+    pygame.joystick.init()
+    joysticks = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+    for joystick in joysticks:
+        joystick.init()
+        print(f"Initialized joystick: {joystick.get_name()}")
+    
     clouds = [Cloud() for _ in range(10)]
     mountains = [
         BackgroundMountain(0, 150, (100, 100, 120)),
@@ -42,7 +49,7 @@ def main():
             if state == "MENU":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if btn_play.is_clicked(mouse_pos, True):
-                        result = run_game(screen, clock, selected_map)
+                        result = run_game(screen, clock, selected_map, joysticks)
                         if result == "QUIT":
                             running = False
                     elif btn_editor.is_clicked(mouse_pos, True):

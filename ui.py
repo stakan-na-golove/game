@@ -143,11 +143,11 @@ def draw_cannon_ui(surface, player):
     stats_surf = font_small.render(stats_text, True, (180, 180, 180))
     surface.blit(stats_surf, (x + 10, y + 22))
     if player.name == 'p1':
-        text1 = font_small.render("Aim: W/S | Shoot: A/D", True, WHITE)
+        text1 = font_small.render("Aim: W/S | Shoot: W/S", True, WHITE)
         text2 = font_small.render("Exit: Q", True, (200, 200, 200))
     else:
-        text1 = font_small.render("Aim: ↑/↓ | Shoot: ←/→", True, WHITE)
-        text2 = font_small.render("Exit: Right Shift", True, (200, 200, 200))
+        text1 = font_small.render("Aim: ↑/↓ | Shoot: ↑/↓", True, WHITE)
+        text2 = font_small.render("Exit: Left Shift", True, (200, 200, 200))
     surface.blit(text1, (x + 10, y + 42))
     surface.blit(text2, (x + 10, y + 58))
     # Показываем взрывные заряды
@@ -218,7 +218,7 @@ def draw_game_over_screen(surface, stats, winner_name, p1, p2):
     seconds = int(stats.game_time % 60)
     time_text = font_medium.render(f"Game Time: {minutes}:{seconds:02d}", True, CYAN)
     surface.blit(time_text, (SCREEN_WIDTH//2 - time_text.get_width()//2, panel_y + panel_height - 50))
-    hint = font_medium.render("Press SPACE to return to menu, R to restart", True, (150, 150, 150))
+    hint = font_medium.render("Press SPACE/B to return to menu, R/A to restart", True, (150, 150, 150))
     surface.blit(hint, (SCREEN_WIDTH//2 - hint.get_width()//2, SCREEN_HEIGHT - 60))
 
 def draw_menu(surface, clouds, mountains, buttons, selected_map, map_list):

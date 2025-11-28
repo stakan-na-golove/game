@@ -24,7 +24,7 @@ class GameStats:
         self.winner = None
         self.game_time = 0
 
-def run_game(screen, clock, selected_map):
+def run_game(screen, clock, selected_map, joysticks=None):
     from utils import load_map, create_default_map
     
     tiles, cannons = load_map(selected_map) if selected_map else create_default_map()
@@ -42,8 +42,8 @@ def run_game(screen, clock, selected_map):
         'right': pygame.K_d,
         'up': pygame.K_w,
         'down': pygame.K_s,
-        'shoot_left': pygame.K_a,
-        'shoot_right': pygame.K_d,
+        'shoot_left': pygame.K_w,
+        'shoot_right': pygame.K_s,
         'toggle_cannon': pygame.K_q  # Вход/выход из пушки
     }
     p2_controls = {
@@ -51,14 +51,21 @@ def run_game(screen, clock, selected_map):
         'right': pygame.K_RIGHT,
         'up': pygame.K_UP,
         'down': pygame.K_DOWN,
-        'shoot_left': pygame.K_LEFT,
-        'shoot_right': pygame.K_RIGHT,
-        'toggle_cannon': pygame.K_RSHIFT  # Вход/выход из пушки
+        'shoot_left': pygame.K_UP,
+        'shoot_right': pygame.K_DOWN,
+        'toggle_cannon': pygame.K_LSHIFT  # Вход/выход из пушки
     }
     
     p1 = Player(100, 300, BLUE, p1_controls, 'p1')
     p2 = Player(SCREEN_WIDTH - 140, 300, RED, p2_controls, 'p2')
     players = [p1, p2]
+    
+    # Assign joysticks to players if available
+    if joysticks and len(joysticks) > 0:
+        p1.joystick = joysticks[0] if len(joysticks) > 0 else None
+        p1.joystick_id = joysticks[0].get_id() if len(joysticks) > 0 else None
+        p2.joystick = joysticks[1] if len(joysticks) > 1 else None
+        p2.joystick_id = joysticks[1].get_id() if len(joysticks) > 1 else None
     
     clouds = [Cloud() for _ in range(8)]
     mountains = [
@@ -85,7 +92,15 @@ def run_game(screen, clock, selected_map):
                     if event.key == pygame.K_SPACE:
                         return "MENU"
                     elif event.key == pygame.K_r:
-                        return run_game(screen, clock, selected_map)
+                        return run_game(screen, clock, selected_map, joysticks)
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if game_over:
+                    # B button (button 1) to return to menu
+                    if event.button == 1:  # B button
+                        return "MENU"
+                    # A button (button 0) to restart
+                    elif event.button == 0:  # A button
+                        return run_game(screen, clock, selected_map, joysticks)
             if not game_over:
                 for p in players:
                     p.handle_event(event, tiles, projectiles, cannons, players, stats)
